@@ -22,7 +22,8 @@ from .models import (Article, ArticleStatus, BetterWriter, BigInt, Book,
     DerivedPost, ExplicitPK, FlexibleDatePost, ImprovedArticle,
     ImprovedArticleWithParentLink, Inventory, Post, Price,
     Product, TextFile, Writer, WriterProfile, Colour, ColourfulItem,
-    ArticleStatusNote, DateTimePost, CustomErrorMessage, test_images)
+    ArticleStatusNote, DateTimePost, CustomErrorMessage, test_images,
+    Topping, Pizza, Box)
 
 if test_images:
     from .models import ImageFile, OptionalImageFile
@@ -1808,3 +1809,60 @@ class M2mHelpTextTest(TestCase):
         html = form.as_p()
         self.assertInHTML('<ul id="id_status">', html)
         self.assertInHTML(dreaded_help_text, html, count=0)
+
+
+# reverse M2M relation descriptor in fields
+class ToppingPizzasetForm(forms.ModelForm):
+    class Meta:
+        model = Topping
+        fields = ('name', 'pizza_set',)
+
+class ModelFormReverseM2MTest(TestCase):
+    def test_model_form_with_reverse_m2m(self):
+        p1 = Pizza(name="margharita")
+        p1.save()
+        p2 = Pizza(name="bolognese")
+        p2.save()
+        f = ToppingPizzasetForm()
+        self.assertEqual(len(f.fields["pizza_set"].choices), 2)
+        html = f.as_p()
+        self.assertInHTML('<option value="%s">margharita</option>' % p1.pk, html)
+        self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
+        f = ToppingPizzasetForm({'name': 'cheese', 'pizza_set': [p1.pk]})
+        self.assertEqual(f.is_valid(), True)
+        topping = f.save()
+        self.assertEqual(topping.pizza_set.count(), 1)
+        self.assertEqual(topping.pizza_set.all()[0], p1)
+        f = ToppingPizzasetForm(instance=topping)
+        self.assertEqual(len(f.fields["pizza_set"].choices), 2)
+        html = f.as_p()
+        self.assertInHTML('<option value="%s" selected="selected">margharita</option>' % p1.pk, html)
+        self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
+
+# reverse M2M relation descriptor in fields
+class BoxPizzasetForm(forms.ModelForm):
+    class Meta:
+        model = Box
+        fields = ('name', 'pizza_set',)
+
+class ModelFormReverseFKTest(TestCase):
+    def test_model_form_with_reverse_fk(self):
+        p1 = Pizza(name="margharita")
+        p1.save()
+        p2 = Pizza(name="bolognese")
+        p2.save()
+        f = BoxPizzasetForm()
+        self.assertEqual(len(f.fields["pizza_set"].choices), 2)
+        html = f.as_p()
+        self.assertInHTML('<option value="%s">margharita</option>' % p1.pk, html)
+        self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
+        f = BoxPizzasetForm({'name': 'sq10', 'pizza_set': [p1.pk]})
+        self.assertEqual(f.is_valid(), True)
+        box = f.save()
+        self.assertEqual(box.pizza_set.count(), 1)
+        self.assertEqual(box.pizza_set.all()[0], p1)
+        f = BoxPizzasetForm(instance=box)
+        self.assertEqual(len(f.fields["pizza_set"].choices), 2)
+        html = f.as_p()
+        self.assertInHTML('<option value="%s" selected="selected">margharita</option>' % p1.pk, html)
+        self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)

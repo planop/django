@@ -300,3 +300,23 @@ class CustomErrorMessage(models.Model):
     def clean(self):
         if self.name1 == 'FORBIDDEN_VALUE':
             raise ValidationError({'name1': [ValidationError('Model.clean() error messages.')]})
+
+@python_2_unicode_compatible
+class Topping(models.Model):
+    name = models.CharField(max_length=20)
+    def __str__(self):
+        return self.name
+
+@python_2_unicode_compatible
+class Pizza(models.Model):
+    name = models.CharField(max_length=20)
+    toppings = models.ManyToManyField('Topping', null=True, blank=True)
+    box = models.ForeignKey('Box', null=True, blank=True)
+    def __str__(self):
+        return self.name
+
+@python_2_unicode_compatible
+class Box(models.Model):
+    name = models.CharField(max_length=20)
+    def __str__(self):
+        return self.name

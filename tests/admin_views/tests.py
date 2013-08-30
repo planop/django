@@ -3863,7 +3863,7 @@ class GroupAdminTest(TestCase):
     def test_group_permission_performance(self):
         g = Group.objects.create(name="test_group")
 
-        expected_queries = 8
+        expected_queries = 10
         # Oracle doesn't implement "RELEASE SAVPOINT", see #20387.
         if connection.vendor == 'oracle':
             expected_queries -= 1

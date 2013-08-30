@@ -224,6 +224,16 @@ subclass::
     has ``editable=True``, in a single fieldset, in the same order as the fields
     are defined in the model.
 
+    .. verionadded:: 1.7
+
+    The name of a reverse relation of a ``ForeignKey`` or ``ManyToManyField``
+    (e.g. 'book_set') can be used in the ``fields`` option.
+    This will add a select field to the form, analogous to the select field
+    used for a forward many-to-many relation.
+    These fields can also be used in the ``filter_horizontal`` and
+    ``filter_vertical`` options.
+
+
 .. attribute:: ModelAdmin.fieldsets
 
     Set ``fieldsets`` to control the layout of admin "add" and "change" pages.

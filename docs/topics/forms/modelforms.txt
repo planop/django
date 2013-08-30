@@ -601,6 +601,33 @@ attribute on the ``Meta`` class.
 If ``localized_fields`` is set to the special value ``'__all__'``, all fields
 will be localized.
 
+Adding a field for a reverse many-to-many relation
+--------------------------------------------------
+
+.. verionadded:: 1.7
+
+For foreignkey and many-to-many relations, django adds a manager to the other
+side of the relation that returns all instances of the first model. The default
+name for this manager is ``FOO_set`` (but this can be changed). See the
+:ref:`related objects documentation <backwards-related-objects>` for
+a full explanation and example.
+
+In our example, each author has a ``book_set`` attribute, which points to this
+manager.
+
+You can use the name of such a reverse relation in the ``fields`` definition of a
+``ModelForm``. This will add a ``ModelMultipleChoiceField`` to the form,
+analogous to the field you get for the ``ManyToManyField`` on the other side of
+the relation.
+
+Example::
+
+    class AuthorForm(ModelForm):
+        class Meta:
+            model = Author
+            fields = ['name', 'title', 'birth_date', 'book_set']
+
+
 Form inheritance
 ----------------
 

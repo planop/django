@@ -89,6 +89,11 @@ def save_instance(form, instance, fields=None, fail_message='saved',
                 continue
             if f.name in cleaned_data:
                 f.save_form_data(instance, cleaned_data[f.name])
+        if fields:
+            other_fields = set(fields) - set(opts.fields + opts.many_to_many) - set(exclude or [])
+            for item in other_fields:
+                setattr(instance, item, cleaned_data[item])
+
     if commit:
         # If we are committing, save the instance and the m2m data immediately.
         instance.save()
@@ -115,7 +120,7 @@ def model_to_dict(instance, fields=None, exclude=None):
     the ``fields`` argument.
     """
     # avoid a circular import
-    from django.db.models.fields.related import ManyToManyField
+    from django.db.models.fields.related import ManyToManyField, ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
     opts = instance._meta
     data = {}
     for f in opts.concrete_fields + opts.many_to_many:
@@ -136,6 +141,17 @@ def model_to_dict(instance, fields=None, exclude=None):
                 data[f.name] = list(f.value_from_object(instance).values_list('pk', flat=True))
         else:
             data[f.name] = f.value_from_object(instance)
+    if fields:
+        other_fields = set(fields) - set(data.keys()) - set(exclude or [])
+        for item in other_fields:
+            if hasattr(instance.__class__, item) and \
+                    (isinstance(getattr(instance.__class__, item), ManyRelatedObjectsDescriptor)
+                or isinstance(getattr(instance.__class__, item), ForeignRelatedObjectsDescriptor)):
+                if instance.pk is None:
+                    data[item] = []
+                else:
+                    # MultipleChoiceWidget needs a list of pks, not object instances.
+                    data[item] = [obj.pk for obj in getattr(instance, item).all()]
     return data
 
 def fields_for_model(model, fields=None, exclude=None, widgets=None,
@@ -165,6 +181,7 @@ def fields_for_model(model, fields=None, exclude=None, widgets=None,
     ``formfield_callback`` is a callable that takes a model field and returns
     a form field.
     """
+    from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
     field_list = []
     ignored = []
     opts = model._meta
@@ -199,6 +216,22 @@ def fields_for_model(model, fields=None, exclude=None, widgets=None,
             field_list.append((f.name, formfield))
         else:
             ignored.append(f.name)
+
+    if fields:
+        missing_fields = set(fields) - set([k[0] for k in field_list]) - set(exclude or [])
+        for item in missing_fields:
+            if hasattr(model, item) and (isinstance(getattr(model, item), ManyRelatedObjectsDescriptor)
+                or isinstance(getattr(model, item),ForeignRelatedObjectsDescriptor)):
+                kwargs = {
+                    'required': False,
+                    'queryset': getattr(model, item).related.model._default_manager.all(),
+#                    'label': getattr(model, item).related.model._meta.verbose_name_plural
+                }
+                if widgets and item in widgets:
+                    kwargs['widget'] = widgets[item]
+                formfield = ModelMultipleChoiceField(**kwargs)
+                field_list.append((item, formfield))
+
     field_dict = OrderedDict(field_list)
     if fields:
         field_dict = OrderedDict(

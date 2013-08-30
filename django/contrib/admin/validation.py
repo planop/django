@@ -1,6 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models.fields import FieldDoesNotExist
+from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
 from django.forms.models import BaseModelForm, BaseModelFormSet, _get_foreign_key
 from django.contrib.admin.util import get_fields_from_path, NotRelationField
 
@@ -43,6 +44,10 @@ class BaseValidator(object):
                     # model field if it's in readonly_fields,
                     # readonly_fields will handle the validation of such
                     # things.
+                    continue
+                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
+                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                    # allow reverse descriptors
                     continue
                 try:
                     f = model._meta.get_field(field)
@@ -116,8 +121,16 @@ class BaseValidator(object):
         if hasattr(cls, 'filter_vertical'):
             check_isseq(cls, 'filter_vertical', cls.filter_vertical)
             for idx, field in enumerate(cls.filter_vertical):
-                f = get_field(cls, model, 'filter_vertical', field)
-                if not isinstance(f, models.ManyToManyField):
+                valid = False
+                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
+                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                    # allow descriptors
+                    valid = True
+                if not valid:
+                    f = get_field(cls, model, 'filter_vertical', field)
+                    if isinstance(f, models.ManyToManyField):
+                        valid = True
+                if not valid:
                     raise ImproperlyConfigured("'%s.filter_vertical[%d]' must be "
                         "a ManyToManyField." % (cls.__name__, idx))
 
@@ -126,8 +139,16 @@ class BaseValidator(object):
         if hasattr(cls, 'filter_horizontal'):
             check_isseq(cls, 'filter_horizontal', cls.filter_horizontal)
             for idx, field in enumerate(cls.filter_horizontal):
-                f = get_field(cls, model, 'filter_horizontal', field)
-                if not isinstance(f, models.ManyToManyField):
+                valid = False
+                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
+                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                    # allow descriptors
+                    valid = True
+                if not valid:
+                    f = get_field(cls, model, 'filter_horizontal', field)
+                    if isinstance(f, models.ManyToManyField):
+                        valid = True
+                if not valid:
                     raise ImproperlyConfigured("'%s.filter_horizontal[%d]' must be "
                         "a ManyToManyField." % (cls.__name__, idx))
 
