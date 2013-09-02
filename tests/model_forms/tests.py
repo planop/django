@@ -23,7 +23,7 @@ from .models import (Article, ArticleStatus, BetterWriter, BigInt, Book,
     ImprovedArticleWithParentLink, Inventory, Post, Price,
     Product, TextFile, Writer, WriterProfile, Colour, ColourfulItem,
     ArticleStatusNote, DateTimePost, CustomErrorMessage, test_images,
-    Topping, Pizza, Box)
+    Topping, Pizza, Box, Label)
 
 if test_images:
     from .models import ImageFile, OptionalImageFile
@@ -1817,11 +1817,14 @@ class ToppingPizzasetForm(forms.ModelForm):
         model = Topping
         fields = ('name', 'pizza_set',)
 
+
 class ModelFormReverseM2MTest(TestCase):
     def test_model_form_with_reverse_m2m(self):
-        p1 = Pizza(name="margharita")
+        b = Box(name='square')
+        b.save()
+        p1 = Pizza(name="margharita", box=b)
         p1.save()
-        p2 = Pizza(name="bolognese")
+        p2 = Pizza(name="bolognese", box=b)
         p2.save()
         f = ToppingPizzasetForm()
         self.assertEqual(len(f.fields["pizza_set"].choices), 2)
@@ -1840,29 +1843,40 @@ class ModelFormReverseM2MTest(TestCase):
         self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
 
 # reverse M2M relation descriptor in fields
-class BoxPizzasetForm(forms.ModelForm):
+class LabelPizzasetForm(forms.ModelForm):
     class Meta:
-        model = Box
+        model = Label
         fields = ('name', 'pizza_set',)
 
 class ModelFormReverseFKTest(TestCase):
     def test_model_form_with_reverse_fk(self):
-        p1 = Pizza(name="margharita")
+        b = Box(name='square')
+        b.save()
+        p1 = Pizza(name="margharita", box=b)
         p1.save()
-        p2 = Pizza(name="bolognese")
+        p2 = Pizza(name="bolognese", box=b)
         p2.save()
-        f = BoxPizzasetForm()
+        f = LabelPizzasetForm()
         self.assertEqual(len(f.fields["pizza_set"].choices), 2)
         html = f.as_p()
         self.assertInHTML('<option value="%s">margharita</option>' % p1.pk, html)
         self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
-        f = BoxPizzasetForm({'name': 'sq10', 'pizza_set': [p1.pk]})
+        f = LabelPizzasetForm({'name': 'New', 'pizza_set': [p1.pk]})
         self.assertEqual(f.is_valid(), True)
         box = f.save()
         self.assertEqual(box.pizza_set.count(), 1)
         self.assertEqual(box.pizza_set.all()[0], p1)
-        f = BoxPizzasetForm(instance=box)
+        f = LabelPizzasetForm(instance=box)
         self.assertEqual(len(f.fields["pizza_set"].choices), 2)
         html = f.as_p()
         self.assertInHTML('<option value="%s" selected="selected">margharita</option>' % p1.pk, html)
         self.assertInHTML('<option value="%s">bolognese</option>' % p2.pk, html)
+
+    # Trying to use reverse relation for non-nullable foreignkey should not work
+    def test_model_form_reverse_nonnullable_fk(self):
+        expected_msg = 'Unknown field(s) (pizza_set) specified for Box'
+        with self.assertRaisesMessage(FieldError, expected_msg):
+            class BoxPizzasetForm(forms.ModelForm):
+                class Meta:
+                    model = Box
+                    fields = ('name', 'pizza_set',)

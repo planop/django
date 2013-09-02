@@ -1,8 +1,7 @@
 from django.core.exceptions import ImproperlyConfigured
 from django.db import models
 from django.db.models.fields import FieldDoesNotExist
-from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
-from django.forms.models import BaseModelForm, BaseModelFormSet, _get_foreign_key
+from django.forms.models import BaseModelForm, BaseModelFormSet, _get_foreign_key, reverse_related_allowed_on_form
 from django.contrib.admin.util import get_fields_from_path, NotRelationField
 
 """
@@ -45,8 +44,7 @@ class BaseValidator(object):
                     # readonly_fields will handle the validation of such
                     # things.
                     continue
-                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
-                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                if hasattr(model, field) and  reverse_related_allowed_on_form(model, field):
                     # allow reverse descriptors
                     continue
                 try:
@@ -122,8 +120,7 @@ class BaseValidator(object):
             check_isseq(cls, 'filter_vertical', cls.filter_vertical)
             for idx, field in enumerate(cls.filter_vertical):
                 valid = False
-                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
-                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                if hasattr(model, field) and reverse_related_allowed_on_form(model, field):
                     # allow descriptors
                     valid = True
                 if not valid:
@@ -140,8 +137,7 @@ class BaseValidator(object):
             check_isseq(cls, 'filter_horizontal', cls.filter_horizontal)
             for idx, field in enumerate(cls.filter_horizontal):
                 valid = False
-                if hasattr(model, field) and (isinstance(getattr(model, field), ManyRelatedObjectsDescriptor)
-                    or isinstance(getattr(model, field), ForeignRelatedObjectsDescriptor)):
+                if hasattr(model, field) and reverse_related_allowed_on_form(model, field):
                     # allow descriptors
                     valid = True
                 if not valid:

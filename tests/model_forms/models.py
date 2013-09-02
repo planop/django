@@ -311,12 +311,19 @@ class Topping(models.Model):
 class Pizza(models.Model):
     name = models.CharField(max_length=20)
     toppings = models.ManyToManyField('Topping', null=True, blank=True)
-    box = models.ForeignKey('Box', null=True, blank=True)
+    box = models.ForeignKey('Box')
+    label = models.ForeignKey('Label', null=True, blank=True)
     def __str__(self):
         return self.name
 
 @python_2_unicode_compatible
 class Box(models.Model):
+    name = models.CharField(max_length=20)
+    def __str__(self):
+        return self.name
+
+@python_2_unicode_compatible
+class Label(models.Model):
     name = models.CharField(max_length=20)
     def __str__(self):
         return self.name

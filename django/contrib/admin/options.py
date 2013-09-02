@@ -22,11 +22,10 @@ from django.db import models, transaction, router
 from django.db.models.constants import LOOKUP_SEP
 from django.db.models.related import RelatedObject
 from django.db.models.fields import BLANK_CHOICE_DASH, FieldDoesNotExist
-from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
 from django.db.models.sql.constants import QUERY_TERMS
 from django.forms.formsets import all_valid, DELETION_FIELD_NAME
 from django.forms.models import (modelform_factory, modelformset_factory,
-    inlineformset_factory, BaseInlineFormSet, modelform_defines_fields)
+    inlineformset_factory, BaseInlineFormSet, modelform_defines_fields, reverse_related_allowed_on_form)
 from django.http import Http404, HttpResponseRedirect
 from django.http.response import HttpResponseBase
 from django.shortcuts import get_object_or_404
@@ -557,8 +556,7 @@ class ModelAdmin(BaseModelAdmin):
             rev_widgets = {}
             other_fields = set(fields) - set(self.model._meta.fields + self.model._meta.many_to_many) - set(exclude or [])
             for item in other_fields:
-                if hasattr(self.model, item) and (isinstance(getattr(self.model, item), ManyRelatedObjectsDescriptor)
-                    or isinstance(getattr(self.model, item), ForeignRelatedObjectsDescriptor)):
+                if hasattr(self.model, item) and reverse_related_allowed_on_form(self.model, item):
                     if item in (list(self.filter_vertical) + list(self.filter_horizontal)):
                         rev_widgets[item] = widgets.FilteredSelectMultiple(item, (item in self.filter_vertical))
             if rev_widgets:

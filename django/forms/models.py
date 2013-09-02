@@ -120,7 +120,7 @@ def model_to_dict(instance, fields=None, exclude=None):
     the ``fields`` argument.
     """
     # avoid a circular import
-    from django.db.models.fields.related import ManyToManyField, ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
+    from django.db.models.fields.related import ManyToManyField
     opts = instance._meta
     data = {}
     for f in opts.concrete_fields + opts.many_to_many:
@@ -144,9 +144,7 @@ def model_to_dict(instance, fields=None, exclude=None):
     if fields:
         other_fields = set(fields) - set(data.keys()) - set(exclude or [])
         for item in other_fields:
-            if hasattr(instance.__class__, item) and \
-                    (isinstance(getattr(instance.__class__, item), ManyRelatedObjectsDescriptor)
-                or isinstance(getattr(instance.__class__, item), ForeignRelatedObjectsDescriptor)):
+            if hasattr(instance.__class__, item) and reverse_related_allowed_on_form(instance.__class__, item):
                 if instance.pk is None:
                     data[item] = []
                 else:
@@ -181,7 +179,6 @@ def fields_for_model(model, fields=None, exclude=None, widgets=None,
     ``formfield_callback`` is a callable that takes a model field and returns
     a form field.
     """
-    from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
     field_list = []
     ignored = []
     opts = model._meta
@@ -220,11 +217,11 @@ def fields_for_model(model, fields=None, exclude=None, widgets=None,
     if fields:
         missing_fields = set(fields) - set([k[0] for k in field_list]) - set(exclude or [])
         for item in missing_fields:
-            if hasattr(model, item) and (isinstance(getattr(model, item), ManyRelatedObjectsDescriptor)
-                or isinstance(getattr(model, item),ForeignRelatedObjectsDescriptor)):
+            if hasattr(model, item) and reverse_related_allowed_on_form(model, item):
                 kwargs = {
                     'required': False,
                     'queryset': getattr(model, item).related.model._default_manager.all(),
+# need solution for label in admin filter_horizontal 'user_set', should be 'users'
 #                    'label': getattr(model, item).related.model._meta.verbose_name_plural
                 }
                 if widgets and item in widgets:
@@ -1252,3 +1249,13 @@ def modelform_defines_fields(form_class):
             (form_class._meta.fields is not None or
              form_class._meta.exclude is not None)
             ))
+
+
+def reverse_related_allowed_on_form(model, descriptorname):
+    from django.db.models.fields.related import ManyRelatedObjectsDescriptor, ForeignRelatedObjectsDescriptor
+    if isinstance(getattr(model, descriptorname), ManyRelatedObjectsDescriptor):
+        return True
+    if isinstance(getattr(model, descriptorname), ForeignRelatedObjectsDescriptor):
+        if getattr(model, descriptorname).related.field.null:
+            return True
+    return False
