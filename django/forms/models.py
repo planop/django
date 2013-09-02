@@ -221,8 +221,7 @@ def fields_for_model(model, fields=None, exclude=None, widgets=None,
                 kwargs = {
                     'required': False,
                     'queryset': getattr(model, item).related.model._default_manager.all(),
-# need solution for label in admin filter_horizontal 'user_set', should be 'users'
-#                    'label': getattr(model, item).related.model._meta.verbose_name_plural
+                    'label': capfirst(getattr(model, item).related.model._meta.verbose_name_plural)
                 }
                 if widgets and item in widgets:
                     kwargs['widget'] = widgets[item]
