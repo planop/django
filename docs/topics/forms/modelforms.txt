@@ -601,8 +601,8 @@ attribute on the ``Meta`` class.
 If ``localized_fields`` is set to the special value ``'__all__'``, all fields
 will be localized.
 
-Adding a field for a reverse many-to-many relation
---------------------------------------------------
+Adding a field for a reverse relation
+-------------------------------------
 
 .. verionadded:: 1.7
 
@@ -626,6 +626,11 @@ Example::
         class Meta:
             model = Author
             fields = ['name', 'title', 'birth_date', 'book_set']
+
+You can use this to add the reverse side of a ``ManyToManyField`` or a nullable
+``ForeignKey`` to your form. Non-nullable foreignkey fields are not allowed,
+because removing an item from the reverse ``ModelMultipleChoiceField`` would
+not be possible.
 
 
 Form inheritance
