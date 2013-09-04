@@ -427,6 +427,16 @@ For more details, including how to delete objects in bulk, see
 If you want customized deletion behavior, you can override the ``delete()``
 method. See :ref:`overriding-model-methods` for more details.
 
+Refreshing objects
+==================
+
+.. method:: Model.refresh([*fieldnames])
+
+Reloads the data of the python object from the database.
+
+If fieldnames are specified, only those fields are fetched and updated on
+the python object.
+
 .. _model-instance-methods:
 
 Other model instance methods

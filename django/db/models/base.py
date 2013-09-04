@@ -1009,6 +1009,29 @@ class Model(six.with_metaclass(ModelBase)):
         if errors:
             raise ValidationError(errors)
 
+    def refresh(self, *fieldnames):
+        from django.db.models.fields import FieldDoesNotExist
+        if fieldnames:
+            # validation of fieldnames
+            fields = []
+            for field_name in fieldnames:
+                try:
+                    f = self.__class__._meta.get_field_by_name(field_name)[0]
+                except FieldDoesNotExist:
+                    try:
+                        f = [f for f in self.__class__._meta.fields if f.attname == field_name][0]
+                    except IndexError:
+                        raise ValueError("%s in refresh() is not a valid fieldname" % field_name)
+                fields.append(f.name)
+            new_self = self.__class__._base_manager.only(*fields).using(
+                        self._state.db).get(pk=self.pk)
+            for f in fields:
+                setattr(self,f, getattr(new_self,f))
+        else:
+            new_self = self.__class__._base_manager.using(
+                        self._state.db).get(pk=self.pk)
+            for f in self.__class__._meta.fields:
+                setattr(self,f.name, getattr(new_self,f.name))
 
 ############################################
 # HELPER FUNCTIONS (CURRIED MODEL METHODS) #
