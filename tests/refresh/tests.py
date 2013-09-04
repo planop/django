@@ -93,3 +93,34 @@ class RefreshTests(TestCase):
         a = Primary.objects.get(pk = p1.pk)
         b = Primary.objects.get(pk = p1.pk)
         self.assertRaises(ValueError, b.refresh(),'nofield')
+
+    def assert_delayed(self, obj, num):
+        from django.db.models.query_utils import DeferredAttribute
+        count = 0
+        for field in obj._meta.fields:
+            if isinstance(obj.__class__.__dict__.get(field.attname),
+                DeferredAttribute):
+                count += 1
+        self.assertEqual(count, num)
+
+    def test_refresh_after_defer(self):
+        s1 = Secondary.objects.create(name="x1")
+        p1 = Primary.objects.create(name="p1", value="xx", related=s1)
+
+        a = Primary.objects.filter(pk = p1.pk).only('name')[0]
+        self.assert_delayed(a, 2)
+        self.assertEqual(a.name, 'p1')
+        with self.assertNumQueries(3):
+            self.assertEqual(a.name, 'p1')
+            self.assertEqual(a.value, 'xx')
+            self.assertEqual(a.related, s1)
+
+        a = Primary.objects.filter(pk = p1.pk).only('name')[0]
+        self.assert_delayed(a, 2)
+        self.assertEqual(a.name, 'p1')
+        a.refresh()
+        with self.assertNumQueries(0):
+            self.assertEqual(a.name, 'p1')
+            self.assertEqual(a.value, 'xx')
+            self.assertEqual(a.related, s1)
+
